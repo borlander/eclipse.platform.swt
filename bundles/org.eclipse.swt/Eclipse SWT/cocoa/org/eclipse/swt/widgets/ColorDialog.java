@@ -98,6 +98,10 @@ void changeColor(long id, long sel, long sender) {
 	selected = true;
 }
 
+public void setLocation(Point location) {
+	// Do nothing on macosx, here for api compatability
+}
+
 /**
  * Returns the currently selected color in the receiver.
  *
