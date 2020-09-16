@@ -14,7 +14,7 @@
  *******************************************************************************/
 package org.eclipse.swt.dnd;
 
-import org.eclipse.swt.SWT;
+import org.eclipse.swt.*;
 import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.internal.cocoa.*;
 import org.eclipse.swt.widgets.*;
@@ -39,9 +39,17 @@ public class ImageTransfer extends ByteArrayTransfer {
 
 static ImageTransfer _instance = new ImageTransfer();
 static final String TIFF = OS.NSTIFFPboardType.getString();
-static final int TIFFID = registerType(TIFF);
+
+private final String myTypeName;
+private final int myTypeId;
+
+protected ImageTransfer(String typeName, int typeId) {
+	myTypeName = typeName;
+	myTypeId = typeId;
+}
 
 ImageTransfer() {
+    this(TIFF, registerType(TIFF));
 }
 
 /**
@@ -118,12 +126,12 @@ public Object nativeToJava(TransferData transferData) {
 
 @Override
 protected int[] getTypeIds() {
-	return new int[] { TIFFID };
+	return new int[] { myTypeId };
 }
 
 @Override
 protected String[] getTypeNames() {
-	return new String[] { TIFF };
+	return new String[] { myTypeName };
 }
 
 boolean checkImage(Object object) {
