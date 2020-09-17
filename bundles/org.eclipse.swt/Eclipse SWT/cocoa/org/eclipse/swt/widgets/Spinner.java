@@ -69,6 +69,9 @@ public class Spinner extends Composite {
 		LIMIT = 0x7FFFFFFF;
 	}
 
+    private boolean mouseInsideTextField = false;
+
+
 /**
  * Constructs a new instance of this class given its parent
  * and a style value describing its behavior and appearance.
@@ -100,6 +103,16 @@ public class Spinner extends Composite {
  */
 public Spinner (Composite parent, int style) {
 	super (parent, checkStyle (style));
+
+	addMouseMoveListener((evt) -> {
+		NSRect textBounds = textView.frame();
+		boolean wasInside = mouseInsideTextField;
+		mouseInsideTextField = (evt.x >= textBounds.x) && (evt.y >= textBounds.y)
+				&& evt.x < (textBounds.x + textBounds.width) && evt.y < (textBounds.y + textBounds.height);
+		if (wasInside != mouseInsideTextField) {
+			display.setCursor(this);
+		}
+	});
 }
 
 @Override
@@ -375,11 +388,10 @@ void drawInteriorWithFrame_inView(long id, long sel, NSRect cellFrame, long view
 
 @Override
 Cursor findCursor () {
-	Cursor cursor = super.findCursor ();
-	if (cursor == null && (style & SWT.READ_ONLY) == 0 && OS.VERSION < OS.VERSION(10, 14, 0)) {
-		cursor = display.getSystemCursor (SWT.CURSOR_IBEAM);
-	}
-	return cursor;
+    if (mouseInsideTextField && (style & SWT.READ_ONLY) == 0) {
+        return display.getSystemCursor (SWT.CURSOR_IBEAM);
+    }
+    return display.getSystemCursor (SWT.CURSOR_ARROW);
 }
 
 @Override
