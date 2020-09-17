@@ -491,7 +491,10 @@ public int getSelection () {
 	return (int)((NSStepper)buttonView).doubleValue();
 }
 
-int getSelectionText (boolean[] parseFail) {
+/**
+ * exposed to fix ND-2027 - Support textual undo for inspector spinners
+ */
+public int getSelectionText (boolean[] parseFail) {
 	String string = textView.stringValue().getString();
 	try {
 		int value;
