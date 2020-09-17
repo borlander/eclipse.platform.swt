@@ -778,9 +778,16 @@ boolean sendKeyEvent(int eventType, Event event) {
 	case 0xd:
 	case 0x1000001:
 	case 0x1000002:
+	case 0x1000003: // left cursor
+	case 0x1000004: // right cursor
 	case 0x1000005:
 	case 0x1000006:
 		return super.sendKeyEvent(eventType, event);
+	case 0x61:
+		if ((event.stateMask & SWT.COMMAND) != 0) {  // CMD + a
+			selectAll();
+		}
+		return false;
 	default: {
 		char character = event.character;
 		boolean isANumber = Character.isDigit(character);
@@ -1156,12 +1163,17 @@ void updateCursorRects (boolean enabled) {
 public void setEmpty() {
 	String string = ""; //$NON-NLS-1$
 	textView.setStringValue(NSString.stringWith(string));
+	selectAll();
+}
+
+public void selectAll() {
 	NSRange selection = new NSRange();
 	selection.location = 0;
-	selection.length = string.length();
+	selection.length = getText().length();
 	NSText fieldEditor = textView.currentEditor();
-	if (fieldEditor != null)
+	if (fieldEditor != null) {
 		fieldEditor.setSelectedRange(selection);
+	}
 }
 
 String verifyText (String string, int start, int end, NSEvent keyEvent) {
