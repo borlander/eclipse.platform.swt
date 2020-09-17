@@ -1153,6 +1153,17 @@ void updateCursorRects (boolean enabled) {
 	updateCursorRects (enabled, buttonView);
 }
 
+public void setEmpty() {
+	String string = ""; //$NON-NLS-1$
+	textView.setStringValue(NSString.stringWith(string));
+	NSRange selection = new NSRange();
+	selection.location = 0;
+	selection.length = string.length();
+	NSText fieldEditor = textView.currentEditor();
+	if (fieldEditor != null)
+		fieldEditor.setSelectedRange(selection);
+}
+
 String verifyText (String string, int start, int end, NSEvent keyEvent) {
 	Event event = new Event ();
 	if (keyEvent != null) setKeyState(event, SWT.MouseDown, keyEvent);
