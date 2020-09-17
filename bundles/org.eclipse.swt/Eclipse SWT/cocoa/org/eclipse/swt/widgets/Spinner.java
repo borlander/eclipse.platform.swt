@@ -296,6 +296,10 @@ void createHandle () {
 	textView = textWidget;
 	view = widget;
 	setSelection (0, false, true, false);
+	// see:
+	// https://developer.apple.com/documentation/foundation/nsnumberformatterstyle/nsnumberformatterdecimalstyle?language=occ
+	// https://developer.apple.com/documentation/corefoundation/cfnumberformatterstyle/kcfnumberformatterdecimalstyle?language=occ
+	textFormatter.setNumberStyle(1);
 }
 
 /**
@@ -764,6 +768,34 @@ boolean sendKeyEvent (NSEvent nsEvent, int type) {
 }
 
 @Override
+boolean sendKeyEvent(int eventType, Event event) {
+	if (eventType != SWT.KeyDown) {
+		return super.sendKeyEvent(eventType, event);
+	}
+
+	switch (event.keyCode) {
+	case 0x8:
+	case 0xd:
+	case 0x1000001:
+	case 0x1000002:
+	case 0x1000005:
+	case 0x1000006:
+		return super.sendKeyEvent(eventType, event);
+	default: {
+		char character = event.character;
+		boolean isANumber = Character.isDigit(character);
+		boolean isSeparator = (character == textFormatter.decimalSeparator().characterAtIndex(0));
+		boolean isMathSymbol = (character == 0x2d || character == 0x2b);
+		if (isANumber || (isSeparator && digits > 0) || isMathSymbol) {
+			return super.sendKeyEvent(eventType, event);
+		}
+	}
+	}
+	return false;
+}
+
+
+@Override
 void sendSelection () {
 	setSelection (getSelection(), false, true, true);
 }
@@ -804,6 +836,7 @@ public void setDigits (int value) {
 	checkWidget ();
 	if (value < 0) error (SWT.ERROR_INVALID_ARGUMENT);
 	if (value == digits) return;
+	textFormatter.setMaximumFractionDigits(value);
 	digits = value;
 	int pos = (int)buttonView.doubleValue();
 	setSelection (pos, false, true, false);
@@ -860,6 +893,7 @@ public void setMaximum (int value) {
 	checkWidget ();
 	int min = getMinimum ();
 	if (value < min) return;
+	textFormatter.setMaximum(NSNumber.numberWithInt(value));
 	int pos = getSelection();
 	buttonView.setMaxValue(value);
 	if (pos > value) setSelection (value, true, true, false);
@@ -882,6 +916,7 @@ public void setMinimum (int value) {
 	checkWidget ();
 	int max = getMaximum();
 	if (value > max) return;
+	textFormatter.setMinimum(NSNumber.numberWithInt(value));
 	int pos = getSelection();
 	buttonView.setMinValue(value);
 	if (pos < value) setSelection (value, true, true, false);
