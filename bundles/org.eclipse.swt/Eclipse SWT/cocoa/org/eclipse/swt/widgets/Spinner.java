@@ -1133,6 +1133,11 @@ String verifyText (String string, int start, int end, NSEvent keyEvent) {
 		}
 		index = 0;
 	}
+	// ND-1792 fix for negatives macosx.cocoa
+	if (string.length() > 0 && getMinimum() < 0 && string.charAt(0) == '-') {
+		index++;
+	}
+	// ND-1792 end
 	while (index < string.length ()) {
 		if (!Character.isDigit (string.charAt (index))) break;
 		index++;
