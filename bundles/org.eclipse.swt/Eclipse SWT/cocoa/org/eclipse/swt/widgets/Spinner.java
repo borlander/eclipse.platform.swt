@@ -800,9 +800,24 @@ boolean sendKeyEvent(int eventType, Event event) {
 	case SWT.PAGE_DOWN:
 	case SWT.KEYPAD_CR:
 		return super.sendKeyEvent(eventType, event);
-	case 0x61:
-		if ((event.stateMask & SWT.COMMAND) != 0) {  // CMD + a
+	case 'a':
+		if (isWithCommandModifier(event)) {
 			selectAll();
+		}
+		return false;
+	case 'v':
+		if (isWithCommandModifier(event)) {
+			paste();
+		}
+		return false;
+	case 'x':
+		if (isWithCommandModifier(event)) {
+			cut();
+		}
+		return false;
+	case 'c':
+		if (isWithCommandModifier(event)) {
+			copy();
 		}
 		return false;
 	default: {
@@ -818,6 +833,10 @@ boolean sendKeyEvent(int eventType, Event event) {
 	return false;
 }
 
+
+private static boolean isWithCommandModifier(Event event) {
+    return (event.stateMask & SWT.COMMAND) != 0;
+}
 
 @Override
 void sendSelection () {
