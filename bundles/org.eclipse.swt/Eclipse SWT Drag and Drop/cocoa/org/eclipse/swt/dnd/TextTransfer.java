@@ -40,9 +40,18 @@ public class TextTransfer extends ByteArrayTransfer {
 	static TextTransfer _instance = new TextTransfer();
 
 	static final String ID_NAME = OS.NSPasteboardTypeString.getString();
-	static final int ID = registerType(ID_NAME);
 
-TextTransfer() {}
+private final String myTypeName;
+private final int myTypeId;
+
+protected TextTransfer(String typeName, int typeId) {
+	myTypeName = typeName;
+	myTypeId = typeId;
+}
+
+TextTransfer() {
+	this(ID_NAME, registerType(ID_NAME));
+}
 
 /**
  * Returns the singleton instance of the TextTransfer class.
@@ -89,12 +98,12 @@ public Object nativeToJava(TransferData transferData){
 
 @Override
 protected int[] getTypeIds() {
-	return new int[] {ID};
+	return new int[] { myTypeId };
 }
 
 @Override
 protected String[] getTypeNames() {
-	return new String[] {ID_NAME};
+	return new String[] { myTypeName };
 }
 
 boolean checkText(Object object) {

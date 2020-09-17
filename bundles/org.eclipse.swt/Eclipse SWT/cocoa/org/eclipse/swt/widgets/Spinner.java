@@ -69,6 +69,9 @@ public class Spinner extends Composite {
 		LIMIT = 0x7FFFFFFF;
 	}
 
+    private boolean mouseInsideTextField = false;
+
+
 /**
  * Constructs a new instance of this class given its parent
  * and a style value describing its behavior and appearance.
@@ -100,6 +103,16 @@ public class Spinner extends Composite {
  */
 public Spinner (Composite parent, int style) {
 	super (parent, checkStyle (style));
+
+	addMouseMoveListener((evt) -> {
+		NSRect textBounds = textView.frame();
+		boolean wasInside = mouseInsideTextField;
+		mouseInsideTextField = (evt.x >= textBounds.x) && (evt.y >= textBounds.y)
+				&& evt.x < (textBounds.x + textBounds.width) && evt.y < (textBounds.y + textBounds.height);
+		if (wasInside != mouseInsideTextField) {
+			display.setCursor(this);
+		}
+	});
 }
 
 @Override
@@ -191,7 +204,7 @@ public void addSelectionListener(SelectionListener listener) {
  * @see VerifyListener
  * @see #removeVerifyListener
  */
-void addVerifyListener (VerifyListener listener) {
+public void addVerifyListener (VerifyListener listener) {
 	checkWidget();
 	if (listener == null) error (SWT.ERROR_NULL_ARGUMENT);
 	TypedListener typedListener = new TypedListener (listener);
@@ -296,6 +309,10 @@ void createHandle () {
 	textView = textWidget;
 	view = widget;
 	setSelection (0, false, true, false);
+	// see:
+	// https://developer.apple.com/documentation/foundation/nsnumberformatterstyle/nsnumberformatterdecimalstyle?language=occ
+	// https://developer.apple.com/documentation/corefoundation/cfnumberformatterstyle/kcfnumberformatterdecimalstyle?language=occ
+	textFormatter.setNumberStyle(1);
 }
 
 /**
@@ -371,11 +388,10 @@ void drawInteriorWithFrame_inView(long id, long sel, NSRect cellFrame, long view
 
 @Override
 Cursor findCursor () {
-	Cursor cursor = super.findCursor ();
-	if (cursor == null && (style & SWT.READ_ONLY) == 0 && OS.VERSION < OS.VERSION(10, 14, 0)) {
-		cursor = display.getSystemCursor (SWT.CURSOR_IBEAM);
-	}
-	return cursor;
+    if (mouseInsideTextField && (style & SWT.READ_ONLY) == 0) {
+        return display.getSystemCursor (SWT.CURSOR_IBEAM);
+    }
+    return display.getSystemCursor (SWT.CURSOR_ARROW);
 }
 
 @Override
@@ -475,7 +491,10 @@ public int getSelection () {
 	return (int)((NSStepper)buttonView).doubleValue();
 }
 
-int getSelectionText (boolean[] parseFail) {
+/**
+ * exposed to fix ND-2027 - Support textual undo for inspector spinners
+ */
+public int getSelectionText (boolean[] parseFail) {
 	String string = textView.stringValue().getString();
 	try {
 		int value;
@@ -689,7 +708,7 @@ public void removeSelectionListener(SelectionListener listener) {
  * @see VerifyListener
  * @see #addVerifyListener
  */
-void removeVerifyListener (VerifyListener listener) {
+public void removeVerifyListener (VerifyListener listener) {
 	checkWidget ();
 	if (listener == null) error (SWT.ERROR_NULL_ARGUMENT);
 	if (eventTable == null) return;
@@ -764,6 +783,62 @@ boolean sendKeyEvent (NSEvent nsEvent, int type) {
 }
 
 @Override
+boolean sendKeyEvent(int eventType, Event event) {
+	if (eventType != SWT.KeyDown) {
+		return super.sendKeyEvent(eventType, event);
+	}
+
+	switch (event.keyCode) {
+	case SWT.BS:
+	case SWT.CR:
+	case SWT.DEL:
+	case SWT.ARROW_UP:
+	case SWT.ARROW_DOWN:
+	case SWT.ARROW_LEFT:
+	case SWT.ARROW_RIGHT:
+	case SWT.PAGE_UP:
+	case SWT.PAGE_DOWN:
+	case SWT.KEYPAD_CR:
+		return super.sendKeyEvent(eventType, event);
+	case 'a':
+		if (isWithCommandModifier(event)) {
+			selectAll();
+		}
+		return false;
+	case 'v':
+		if (isWithCommandModifier(event)) {
+			paste();
+		}
+		return false;
+	case 'x':
+		if (isWithCommandModifier(event)) {
+			cut();
+		}
+		return false;
+	case 'c':
+		if (isWithCommandModifier(event)) {
+			copy();
+		}
+		return false;
+	default: {
+		char character = event.character;
+		boolean isANumber = Character.isDigit(character);
+		boolean isSeparator = (character == textFormatter.decimalSeparator().characterAtIndex(0));
+		boolean isMathSymbol = (character == 0x2d || character == 0x2b);
+		if (isANumber || (isSeparator && digits > 0) || isMathSymbol) {
+			return super.sendKeyEvent(eventType, event);
+		}
+	}
+	}
+	return false;
+}
+
+
+private static boolean isWithCommandModifier(Event event) {
+    return (event.stateMask & SWT.COMMAND) != 0;
+}
+
+@Override
 void sendSelection () {
 	setSelection (getSelection(), false, true, true);
 }
@@ -804,6 +879,7 @@ public void setDigits (int value) {
 	checkWidget ();
 	if (value < 0) error (SWT.ERROR_INVALID_ARGUMENT);
 	if (value == digits) return;
+	textFormatter.setMaximumFractionDigits(value);
 	digits = value;
 	int pos = (int)buttonView.doubleValue();
 	setSelection (pos, false, true, false);
@@ -860,6 +936,7 @@ public void setMaximum (int value) {
 	checkWidget ();
 	int min = getMinimum ();
 	if (value < min) return;
+	textFormatter.setMaximum(NSNumber.numberWithInt(value));
 	int pos = getSelection();
 	buttonView.setMaxValue(value);
 	if (pos > value) setSelection (value, true, true, false);
@@ -882,6 +959,7 @@ public void setMinimum (int value) {
 	checkWidget ();
 	int max = getMaximum();
 	if (value > max) return;
+	textFormatter.setMinimum(NSNumber.numberWithInt(value));
 	int pos = getSelection();
 	buttonView.setMinValue(value);
 	if (pos < value) setSelection (value, true, true, false);
@@ -1118,6 +1196,22 @@ void updateCursorRects (boolean enabled) {
 	updateCursorRects (enabled, buttonView);
 }
 
+public void setEmpty() {
+	String string = ""; //$NON-NLS-1$
+	textView.setStringValue(NSString.stringWith(string));
+	selectAll();
+}
+
+public void selectAll() {
+	NSRange selection = new NSRange();
+	selection.location = 0;
+	selection.length = getText().length();
+	NSText fieldEditor = textView.currentEditor();
+	if (fieldEditor != null) {
+		fieldEditor.setSelectedRange(selection);
+	}
+}
+
 String verifyText (String string, int start, int end, NSEvent keyEvent) {
 	Event event = new Event ();
 	if (keyEvent != null) setKeyState(event, SWT.MouseDown, keyEvent);
@@ -1133,6 +1227,11 @@ String verifyText (String string, int start, int end, NSEvent keyEvent) {
 		}
 		index = 0;
 	}
+	// ND-1792 fix for negatives macosx.cocoa
+	if (string.length() > 0 && getMinimum() < 0 && string.charAt(0) == '-') {
+		index++;
+	}
+	// ND-1792 end
 	while (index < string.length ()) {
 		if (!Character.isDigit (string.charAt (index))) break;
 		index++;
