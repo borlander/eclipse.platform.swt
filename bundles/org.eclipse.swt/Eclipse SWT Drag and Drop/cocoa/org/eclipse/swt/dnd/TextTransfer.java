@@ -37,9 +37,9 @@ import org.eclipse.swt.internal.cocoa.*;
  */
 public class TextTransfer extends ByteArrayTransfer {
 
-	static TextTransfer _instance = new TextTransfer();
-
 	static final String ID_NAME = OS.NSPasteboardTypeString.getString();
+
+	static TextTransfer _instance = new TextTransfer();
 
 private final String myTypeName;
 private final int myTypeId;
